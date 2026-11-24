@@ -1,0 +1,46 @@
+[project]
+name = "safarnama-api"
+version = "0.1.0"
+description = "Safarnama travel planning API"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "fastapi==0.165.0",
+    "psycopg[binary]==3.3.9",
+    "pydantic-settings==2.16.3",
+    "uvicorn[standard]==0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx==0.28.1",
+    "mypy==2.4.1",
+    "pytest==9.2.0",
+    "ruff==0.17.6",
+]
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "N", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+mypy_path = "src"
+packages = ["safarnama_api"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'not integration' --strict-markers"
+markers = [
+  "integration: needs a running PostGIS database (SAFARNAMA_DATABASE_URL)",
+]

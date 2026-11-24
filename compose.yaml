@@ -1,0 +1,25 @@
+# Local development database only. Not for staging or production.
+# The postgis image enables the PostGIS extension in POSTGRES_DB on first start.
+name: safarnama
+
+services:
+  db:
+    image: postgis/postgis:18-3.7
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-safarnama}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-safarnama_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-safarnama}
+    ports:
+      # Bound to localhost only.
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
+    name: safarnama_pgdata

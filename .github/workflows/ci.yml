@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4 # version read from package.json "packageManager"
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/api
+    services:
+      db:
+        image: postgis/postgis:18-3.7
+        env:
+          # Throwaway CI-only database; not a secret.
+          POSTGRES_USER: safarnama
+          POSTGRES_PASSWORD: safarnama_ci
+          POSTGRES_DB: safarnama
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U safarnama -d safarnama"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      SAFARNAMA_ENVIRONMENT: ci
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run mypy
+      - run: uv run pytest
+      - run: uv run pytest -m integration
+        env:
+          SAFARNAMA_DATABASE_URL: postgresql://safarnama:safarnama_ci@127.0.0.1:5432/safarnama
